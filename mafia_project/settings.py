@@ -70,6 +70,8 @@ TEMPLATES = [
 WSGI_APPLICATION = 'mafia_project.wsgi.application'
 
 
+ROOT_URLCONF = 'mafia_project.urls'
+
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
