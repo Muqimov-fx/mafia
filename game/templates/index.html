@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% block content %}
+    <h1>🕵️ Mafia Online</h1>
+    {% if error %}<p style="color: red;">{{ error }}</p>{% endif %}
+    
+    <div style="border-bottom: 1px solid #ffffff33; padding-bottom: 20px;">
+        <h3>Yangi o'yin</h3>
+        <form action="{% url 'create_game' %}" method="post">
+            {% csrf_token %}
+            <input type="text" name="nickname" placeholder="Ismingiz" required>
+            <button style="background: #e94560;">O'yin Yaratish</button>
+        </form>
+    </div>
+    <div>
+        <h3>Qo'shilish</h3>
+        <form action="{% url 'join_game' %}" method="post">
+            {% csrf_token %}
+            <input type="text" name="nickname" placeholder="Ismingiz" required>
+            <input type="text" name="room_code" placeholder="Kod (Masalan: AB123)" required>
+            <button style="background: #0f3460;">Qo'shilish</button>
+        </form>
+    </div>
+{% endblock %}

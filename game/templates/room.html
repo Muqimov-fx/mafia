@@ -1,0 +1,151 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+    <h2>Xona: <span style="color: #e94560">{{ game.room_code }}</span></h2>
+
+    <audio id="snd-night" src="{% static 'audio/night.mp3' %}"></audio>
+    <audio id="snd-mafia" src="{% static 'audio/mafia.mp3' %}"></audio>
+    <audio id="snd-doctor" src="{% static 'audio/doctor.mp3' %}"></audio>
+    <audio id="snd-day" src="{% static 'audio/day.mp3' %}"></audio>
+
+    <div id="game-status" style="margin: 20px 0; padding: 15px; background: #0f3460; border-radius: 8px;">
+        <h3 id="phase-text" style="color: yellow; margin: 0;">{{ game.get_phase_display }}</h3>
+        <p id="morning-report" style="color: #00b894; font-weight: bold; margin-top: 10px;"></p>
+    </div>
+
+    {% if player.is_host %}
+        <div id="host-controls">
+            <div id="start-btn" style="display: none;">
+                <a href="{% url 'start_game' game.room_code %}"><button style="background: green;">BOSHLASH</button></a>
+            </div>
+            <div id="next-btn" style="display: none;">
+                <a href="{% url 'next_phase' game.room_code %}"><button style="background: orange;">Keyingi Bosqich ➡️</button></a>
+            </div>
+        </div>
+    {% else %}
+        <p id="wait-msg"><i>Boshlovchi o'yinni boshlashini kuting...</i></p>
+    {% endif %}
+
+    <div id="game-screen" style="display: none;">
+        <div id="role-box" class="role-card"></div>
+        <div id="dead-msg" style="display: none; background: #d63031; padding: 10px; border-radius: 5px;">☠️ SIZ O'LDINGIZ</div>
+    </div>
+
+    <div style="margin-top: 20px;">
+        <h4>O'yinchilar:</h4>
+        <p id="hint" style="color: #74b9ff; font-style: italic; display: none;"></p>
+        <ul id="players-list"></ul>
+    </div>
+
+  <script>
+        const roomCode = "{{ game.room_code }}";
+        // Djangodan CSRF tokenni olamiz
+        const csrfToken = "{{ csrf_token }}"; 
+        
+        let currentPhase = "";
+        
+        function playSound(phase) {
+            document.querySelectorAll('audio').forEach(a => { a.pause(); a.currentTime = 0; });
+            const el = document.getElementById('snd-' + phase.toLowerCase());
+            if(el) el.play().catch(e => console.log(e));
+        }
+
+        // --- TUZATILGAN QISM: Action yuborish ---
+        function sendAction(targetId, targetName) {
+            // 1. Bosilganini bilish uchun Alert chiqarish (Test uchun)
+            if(!confirm(targetName + "ni tanlamoqchimisiz?")) return;
+
+            fetch(`/action/${roomCode}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken // <--- MUHIM: Xavfsizlik kaliti
+                },
+                body: JSON.stringify({ target_id: targetId })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if(data.status === 'ok') {
+                    alert("✅ Qabul qilindi: " + data.msg);
+                } else {
+                    alert("❌ Xatolik: " + data.msg);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert("Serverga ulanishda xato!");
+            });
+        }
+
+        setInterval(() => {
+            fetch(`/api/state/${roomCode}/`)
+                .then(r => r.json())
+                .then(data => {
+                    // Ovoz va Faza
+                    if (data.phase !== currentPhase) {
+                        currentPhase = data.phase;
+                        document.getElementById('phase-text').innerText = data.phase_display;
+                        if(data.is_started) playSound(currentPhase);
+                    }
+                    
+                    document.getElementById('morning-report').innerText = data.morning_report;
+
+                    // Host tugmalari
+                    const startBtn = document.getElementById('start-btn');
+                    const nextBtn = document.getElementById('next-btn');
+                    const waitMsg = document.getElementById('wait-msg');
+
+                    if(startBtn) startBtn.style.display = !data.is_started ? 'block' : 'none';
+                    if(nextBtn) nextBtn.style.display = data.is_started ? 'block' : 'none';
+                    if(waitMsg) waitMsg.style.display = data.is_started ? 'none' : 'block';
+
+                    // Ekran
+                    if (data.is_started) {
+                        document.getElementById('game-screen').style.display = 'block';
+                        const rb = document.getElementById('role-box');
+                        rb.innerText = data.my_role;
+                        rb.className = `role-card ${data.role_code}`;
+                        rb.style.display = 'block';
+                        document.getElementById('dead-msg').style.display = data.am_i_alive ? 'none' : 'block';
+                    }
+
+                    // Ro'yxatni chizish
+                    const list = document.getElementById('players-list');
+                    const hint = document.getElementById('hint');
+                    list.innerHTML = ''; hint.style.display = 'none';
+
+                    let canAct = false;
+                    // Mantiqni tekshiramiz: O'yin boshlangan + Tirikman + Rolim va Faza mos
+                    if (data.is_started && data.am_i_alive) {
+                        if (currentPhase === 'MAFIA' && data.role_code === 'MAFIA') { 
+                            canAct = true; 
+                            hint.innerText = "🔫 O'ldirish uchun ism ustiga bosing!"; 
+                            hint.style.display='block'; 
+                        }
+                        if (currentPhase === 'DOCTOR' && data.role_code === 'DOCTOR') { 
+                            canAct = true; 
+                            hint.innerText = "💉 Davolash uchun ism ustiga bosing!"; 
+                            hint.style.display='block'; 
+                        }
+                    }
+
+                    data.players.forEach(p => {
+                        let style = p.is_alive ? '' : 'text-decoration: line-through; color: gray;';
+                        
+                        // --- TUZATILGAN QISM: Onclick qo'shish ---
+                        let action = '';
+                        if (canAct && p.is_alive) {
+                            // Ismni string sifatida uzatish uchun tirnoq ichiga olamiz
+                            action = `onclick="sendAction(${p.id}, '${p.nickname}')"`;
+                            style += 'cursor: pointer; border: 2px solid #74b9ff; padding: 10px; background: #2d3436; margin: 5px 0; border-radius: 5px; box-shadow: 0 0 5px #74b9ff;';
+                        } else {
+                            style += 'padding: 5px; margin: 5px 0; border-bottom: 1px solid #333;';
+                        }
+                        
+                        list.innerHTML += `<li style="${style}" ${action}>${p.is_alive ? '👤' : '💀'} ${p.nickname} ${p.is_host ? '👑' : ''}</li>`;
+                    });
+                });
+        }, 1500);
+    </script>
+{% endblock %}

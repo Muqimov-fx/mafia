@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mafia Game</title>
+    <style>
+        body { font-family: sans-serif; background: #1a1a2e; color: #fff; text-align: center; margin: 0; display: flex; justify-content: center; min-height: 100vh; }
+        .container { width: 95%; max-width: 450px; padding: 20px; background: #16213e; margin: 20px 0; border-radius: 15px; }
+        button { width: 100%; padding: 15px; margin: 10px 0; border: none; border-radius: 8px; font-size: 16px; color: white; cursor: pointer; }
+        input { width: 100%; padding: 12px; margin: 10px 0; box-sizing: border-box; background: #0f3460; border: 1px solid #533483; color: white; }
+        .role-card { padding: 20px; font-size: 24px; font-weight: bold; border-radius: 10px; display: none; margin-bottom: 20px; }
+        .MAFIA { background: #d63031; } .DOCTOR { background: #0984e3; } .CITIZEN { background: #00b894; }
+        ul { list-style: none; padding: 0; text-align: left; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>
