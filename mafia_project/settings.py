@@ -20,13 +20,17 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-c-o@&8i8eezax@=l5o1ywrgzv00-0#yvl-btng)n=s1cg$*o_m'
 
+SECRET_KEY = os.environ.get("SECRET_KEY", "unsafe-secret")
+
+DEBUG = os.environ.get("DEBUG", "False") == "True"
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+
 
 ALLOWED_HOSTS = ['*']
-
+CSRF_TRUSTED_ORIGINS = [
+    "https://*.onrender.com",
+]
 
 # Application definition
 
@@ -37,7 +41,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+     'channels',
     'game',
+    
 ]
 
 MIDDLEWARE = [
@@ -68,10 +74,17 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'mafia_project.wsgi.application'
-
+ASGI_APPLICATION = "core.asgi.application"
 
 ROOT_URLCONF = 'mafia_project.urls'
-
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [os.environ.get("REDIS_URL")],
+        },
+    },
+}
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
@@ -117,12 +130,15 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = '/static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATIC_URL = "/static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
-    ...
+    "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
 ]
-
