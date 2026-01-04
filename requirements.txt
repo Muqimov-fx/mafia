@@ -1,3 +1,8 @@
-django
+Django
 gunicorn
+channels
+daphne
 whitenoise
+python-dotenv
+redis
+channels-redis
